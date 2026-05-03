@@ -1,0 +1,22 @@
+{
+  "name": "nodebb-plugin-peipe-partner-api",
+  "version": "0.3.0",
+  "description": "Peipe language partner and nearby people API for NodeBB.",
+  "main": "library.js",
+  "keywords": [
+    "nodebb",
+    "nodebb-plugin",
+    "peipe",
+    "language-partner",
+    "nearby"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hurt6465-ai/nodebb-plugin-peipe-partner-api.git"
+  }
+}
