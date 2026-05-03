@@ -1,0 +1,61 @@
+<!-- Example usage for 找语伴 page. This keeps your existing card renderer, but replaces data loading. -->
+<script>
+(function () {
+  var STATE = { cursor: '', loading: false, done: false };
+
+  function renderUsers(users, append) {
+    // Reuse your existing buildCardHTML(u) function from the old page.
+    // The plugin already returns: uid, username, picture, nativeCode, learnCode, bio,
+    // countryCode, flagSrc, isOnline, statusText, profileLink, canChat.
+    var html = (users || []).map(buildCardHTMLFromPluginCard).join('');
+    if (append) $('#ht-user-list').append(html);
+    else $('#ht-user-list').html(html || '<div class="footer-msg">暂无可推荐语伴</div>');
+  }
+
+  function loadMore() {
+    if (STATE.loading || STATE.done) return;
+    STATE.loading = true;
+
+    window.PeipePartnerAPI.list({ mode: 'recommend', limit: 20, cursor: STATE.cursor })
+      .then(function (data) {
+        renderUsers(data.users || [], !!STATE.cursor);
+        STATE.cursor = data.nextCursor || '';
+        STATE.done = !STATE.cursor;
+        $('#header-stats').text((data.candidateCount || 0) + '人');
+      })
+      .catch(function () {
+        $('#ht-user-list').html('<div class="footer-msg">加载失败，请稍后刷新重试</div>');
+      })
+      .finally(function () {
+        STATE.loading = false;
+      });
+  }
+
+  function buildCardHTMLFromPluginCard(u) {
+    // Drop-in adapter for your old code: convert plugin field names to old internal names.
+    u._picture = u.picture;
+    u._nativeCode = u.nativeCode;
+    u._learnCode = u.learnCode;
+    u._genderCode = u.genderCode;
+    u._bio = u.bio;
+    u._isOnline = u.isOnline;
+    u._statusText = u.statusText;
+    u._statusTextCls = u.isOnline ? 'text-online' : '';
+    u._statusDotCls = u.isOnline ? 'online' : '';
+    u._flagSrc = u.flagSrc;
+    u._profileLink = u.profileLink;
+    u._canChat = u.canChat;
+    u._genderHtml = window.genderBadgeHtml ? window.genderBadgeHtml(u.genderCode) : '';
+    return buildCardHTML(u);
+  }
+
+  $(document).ready(function () {
+    loadMore();
+    window.addEventListener('scroll', function () {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 280) {
+        loadMore();
+      }
+    });
+  });
+}());
+</script>
