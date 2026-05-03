@@ -1,0 +1,114 @@
+<!-- Example usage for 附近 page. Same endpoint, mode=nearby. -->
+<script>
+(function () {
+  var LOC_KEY = 'language_partner_location_v1';
+  var LOC_TTL = 24 * 60 * 60 * 1000;
+  var STATE = { cursor: '', loading: false, done: false };
+
+  function getCachedLocation() {
+    try {
+      var data = JSON.parse(localStorage.getItem(LOC_KEY) || 'null');
+      if (!data || !data.updatedAt) return null;
+      if (Date.now() - Number(data.updatedAt) > LOC_TTL) return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveCachedLocation(loc) {
+    try {
+      localStorage.setItem(LOC_KEY, JSON.stringify({
+        lat: loc.lat,
+        lng: loc.lng,
+        updatedAt: Date.now()
+      }));
+    } catch (e) {}
+  }
+
+  function ensureLocation() {
+    var cached = getCachedLocation();
+    if (cached) return Promise.resolve(cached);
+
+    if (!navigator.geolocation) {
+      return Promise.reject(new Error('当前浏览器不支持定位'));
+    }
+
+    return new Promise(function (resolve, reject) {
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var loc = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+        saveCachedLocation(loc);
+        window.PeipePartnerAPI.updateLocation(loc).then(function () {
+          resolve(loc);
+        }).catch(reject);
+      }, reject, {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 30 * 60 * 1000
+      });
+    });
+  }
+
+  function renderUsers(users, append) {
+    var html = (users || []).map(buildCardHTMLFromPluginCard).join('');
+    if (append) $('#ht-user-list').append(html);
+    else $('#ht-user-list').html(html || '<div class="footer-msg">附近暂无可推荐语伴</div>');
+  }
+
+  function loadNearby() {
+    if (STATE.loading || STATE.done) return;
+    STATE.loading = true;
+
+    window.PeipePartnerAPI.list({ mode: 'nearby', limit: 20, cursor: STATE.cursor })
+      .then(function (data) {
+        if (data.needLocation) {
+          return ensureLocation().then(function () {
+            return window.PeipePartnerAPI.list({ mode: 'nearby', limit: 20, cursor: STATE.cursor });
+          });
+        }
+        return data;
+      })
+      .then(function (data) {
+        renderUsers(data.users || [], !!STATE.cursor);
+        STATE.cursor = data.nextCursor || '';
+        STATE.done = !STATE.cursor;
+        $('#header-stats').text((data.candidateCount || 0) + '人');
+      })
+      .catch(function (err) {
+        $('#ht-user-list').html('<div class="footer-msg">' + (err.message || '附近的人加载失败') + '</div>');
+      })
+      .finally(function () {
+        STATE.loading = false;
+      });
+  }
+
+  function buildCardHTMLFromPluginCard(u) {
+    u._picture = u.picture;
+    u._nativeCode = u.nativeCode;
+    u._learnCode = u.learnCode;
+    u._genderCode = u.genderCode;
+    u._bio = u.distanceText ? (u.distanceText + ' · ' + u.bio) : u.bio;
+    u._isOnline = u.isOnline;
+    u._statusText = u.statusText;
+    u._statusTextCls = u.isOnline ? 'text-online' : '';
+    u._statusDotCls = u.isOnline ? 'online' : '';
+    u._flagSrc = u.flagSrc;
+    u._profileLink = u.profileLink;
+    u._canChat = u.canChat;
+    u._genderHtml = window.genderBadgeHtml ? window.genderBadgeHtml(u.genderCode) : '';
+    return buildCardHTML(u);
+  }
+
+  $(document).ready(function () {
+    loadNearby();
+    window.addEventListener('scroll', function () {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 280) {
+        loadNearby();
+      }
+    });
+  });
+}());
+</script>
