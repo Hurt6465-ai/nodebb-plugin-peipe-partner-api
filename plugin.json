@@ -1,0 +1,17 @@
+{
+  "id": "nodebb-plugin-peipe-partner-api",
+  "name": "Peipe Partner API",
+  "description": "Provides Peipe language partner / nearby people APIs, profile completion popup, location TTL, and anti-repeat distribution.",
+  "url": "https://github.com/Hurt6465-ai/nodebb-plugin-peipe-partner-api",
+  "library": "./library.js",
+  "hooks": [
+    {
+      "hook": "static:app.load",
+      "method": "init"
+    }
+  ],
+  "scripts": [
+    "public/src/peipe-partner-client.js"
+  ]
+}
+
